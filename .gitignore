@@ -216,3 +216,34 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+#venv
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+build/
+bin/
+*.apk
+*.aab
+
+#buildozer
+.buildozer/
+buildozer.spec.backup
+
+
+#kivy garden
+.kivy/
+garden/
+
+# Android signing keys
+*.keystore
+
+# Android build system
+*.gradle
+local.properties
+
+# IntelliJ / Android Studio
+*.iml
+
