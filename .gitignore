@@ -247,3 +247,8 @@ local.properties
 # IntelliJ / Android Studio
 *.iml
 
+#db
+
+*.db
+*.db-journal
+*.db-wal
