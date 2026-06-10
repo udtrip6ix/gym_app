@@ -1,35 +1,74 @@
-<MainScreen>:
-    orientation: 'vertical'
-    padding: 20
-    spacing: 15
+ScreenManager:
+    MenuScreen:
+    EditorScreen:
+    ExercisesScreen:
 
+<MenuScreen>:
+    name: 'menu'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 50
+        spacing: 20
+        Label:
+            text: 'Трекер Тренировок'
+            font_size: '24sp'
+        Button:
+            text: 'Мои тренировки'
+        Button:
+            text: 'Редактор'
+            on_press: root.manager.current = 'editor'
+
+<EditorScreen>:
+    name: 'editor'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 20
+        spacing: 10
+        Button:
+            text: 'Редактор тренировок'
+        Button:
+            text: 'Редактор упражнений'
+            on_press: root.manager.current = 'exercises'
+        Button:
+            text: 'Назад'
+            on_press: root.manager.current = 'menu'
+
+<ExercisesScreen>:
+    name: 'exercises'
+    on_enter: self.load_exercises() 
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 10
+        spacing: 10
+        Button:
+            text: 'Назад в редактор'
+            size_hint_y: 0.1
+            on_press: root.manager.current = 'editor'
+        TextInput:
+            id: exercise_name
+            hint_text: 'Новое упражнение'
+            size_hint_y: 0.1
+        Button:
+            text: 'Сохранить'
+            size_hint_y: 0.1
+            on_press: 
+                app.save_exercise(exercise_name.text)
+                exercise_name.text = ''
+        RecycleView:
+            id: exercise_list
+            viewclass: 'ExerciseItem'
+            RecycleBoxLayout:
+                default_size: None, dp(50)
+                default_size_hint: 1, None
+                size_hint_y: None
+                height: self.minimum_height
+                orientation: 'vertical'
+
+<ExerciseItem>:
+    orientation: 'horizontal'
     Label:
-        text: 'Новое упражнение'
-        size_hint_y: 0.1
-        font_size: '20sp'
-
-    TextInput:
-        id: exercise_name
-        hint_text: 'Название упражнения'
-        multiline: False
-        size_hint_y: 0.1
-        font_size: '18sp'
-
+        text: root.text
     Button:
-        text: 'Сохранить'
-        size_hint_y: 0.1
-        on_press: app.save_exercise(exercise_name.text)
-    
-    Label:
-        text: 'Список упражнений:'
-        size_hint_y: 0.1
-
-    RecycleView:
-        id: exercise_list
-        viewclass: 'Label'
-        RecycleBoxLayout:
-            default_size: None, dp(40)
-            default_size_hint: 1, None
-            size_hint_y: None
-            height: self.minimum_height
-            orientation: 'vertical'
+        text: 'X'
+        size_hint_x: 0.2
+        on_press: root.delete_exercise()
