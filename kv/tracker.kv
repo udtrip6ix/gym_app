@@ -106,6 +106,10 @@ ScreenManager:
             text: 'Новая тренировка'
             size_hint_y: 0.1
         TextInput:
+            id: workout_desc
+            hint_text: 'Описание тренировки'
+            size_hint_y: 0.1
+        TextInput:
             id: workout_date
             hint_text: 'Дата (например 10.06.2024)'
             size_hint_y: 0.1
@@ -117,7 +121,7 @@ ScreenManager:
         Button:
             text: 'Создать'
             size_hint_y: 0.1
-            on_press: root.create_workout(workout_date.text, bodyweight.text)
+            on_press: root.create_workout(workout_date.text, bodyweight.text, workout_desc.text)
         Widget:
         Button:
             text: 'Назад'

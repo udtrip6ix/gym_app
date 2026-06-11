@@ -3,7 +3,6 @@ Config.set('graphics', 'width', '360')
 Config.set('graphics', 'height', '640')
 Config.set('graphics', 'resizable', '0')
 
-
 from kivy.app import App
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.lang import Builder
@@ -12,8 +11,6 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 import sqlite3
 
-
-
 class MenuScreen(Screen):
     pass
 
@@ -21,33 +18,34 @@ class EditorScreen(Screen):
     pass
 
 class NewWorkoutScreen(Screen):
-    def create_workout(self, date, bodyweight):
+    def create_workout(self, date, bodyweight, description):
         if not date.strip():
             return
-        
-        weight = float(bodyweight) if bodyweight.strip() else None
-
         conn = sqlite3.connect('tracker.db')
         cursor = conn.cursor()
         cursor.execute(
-            'INSERT INTO workouts (date, bodyweight) VALUES (?, ?)',
-            (date, weight)
+            'INSERT INTO workouts (date, bodyweight, description) VALUES (?, ?, ?)',
+            (date, float(bodyweight) if bodyweight.strip() else None, description)
         )
         conn.commit()
         conn.close()
         self.ids.workout_date.text = ''
         self.ids.bodyweight.text = ''
+        self.ids.workout_desc.text = ''
         self.manager.current = 'workouts'
 
-
 class WorkoutItem(BoxLayout):
-    def __init__(self, workout_id, date, screen, **kwargs):
+    def __init__(self, workout_id, date, bodyweight, description, screen, **kwargs):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint_y = None
-        self.height = 50
-        self.add_widget(Button(text=date))
-
+        self.height = 80
+        
+        info_box = BoxLayout(orientation='vertical')
+        info_box.add_widget(Label(text=description or "Без описания", bold=True))
+        info_box.add_widget(Label(text=f"Дата: {date} | Вес: {bodyweight or '-'}", font_size='12sp'))
+        self.add_widget(info_box)
+        
         btn = Button(text='X', size_hint_x=0.2)
         btn.bind(on_press=lambda x: self.delete_workout(workout_id, screen))
         self.add_widget(btn)
@@ -60,7 +58,6 @@ class WorkoutItem(BoxLayout):
         conn.close()
         screen.load_workouts()
 
-
 class WorkoutsScreen(Screen):
     def on_enter(self):
         self.load_workouts()
@@ -71,36 +68,38 @@ class WorkoutsScreen(Screen):
     
         conn = sqlite3.connect('tracker.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT id, date FROM workouts ORDER BY date DESC')
+        cursor.execute('SELECT id, date, bodyweight, description FROM workouts ORDER BY date DESC')
         rows = cursor.fetchall()
         conn.close()
 
         for row in rows:
-            item = WorkoutItem(workout_id=row[0], date=row[1], screen=self)
+            item = WorkoutItem(
+                workout_id=row[0], 
+                date=row[1], 
+                bodyweight=row[2], 
+                description=row[3], 
+                screen=self
+            )
             workout_list.add_widget(item)
 
-        
 class ExerciseItem(BoxLayout):
     def __init__(self, exercise_id, name, screen, **kwargs):
-            super().__init__(**kwargs)
-            self.orientation='horizontal'
-            self.size_hint_y=None
-            self.height=50
+        super().__init__(**kwargs)
+        self.orientation = 'horizontal'
+        self.size_hint_y = None
+        self.height = 50
+        self.add_widget(Label(text=name))
+        btn = Button(text='X', size_hint_x=0.2)
+        btn.bind(on_press=lambda x: self.delete_exercise(exercise_id, screen))
+        self.add_widget(btn)
 
-            self.add_widget(Label(text=name))
-
-            btn=Button(text='X', size_hint_x=0.2)
-            btn.bind(on_press=lambda x: self.delete_exercise(exercise_id, screen))
-            self.add_widget(btn)
     def delete_exercise(self, exercise_id, screen):
-         conn = sqlite3.connect('tracker.db')
-         cursor=conn.cursor()
-         cursor.execute('DELETE FROM exercises WHERE id = ?', (exercise_id,))
-         conn.commit()
-         conn.close()
-         screen.load_exercises()
-         
-
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM exercises WHERE id = ?', (exercise_id,))
+        conn.commit()
+        conn.close()
+        screen.load_exercises()
 
 class ExercisesScreen(Screen):
     def on_enter(self):
@@ -109,7 +108,6 @@ class ExercisesScreen(Screen):
     def load_exercises(self):
         exercise_list = self.ids.exercise_list
         exercise_list.clear_widgets()
-
         conn = sqlite3.connect('tracker.db')
         cursor = conn.cursor()
         cursor.execute('SELECT id, name FROM exercises')
@@ -121,15 +119,15 @@ class ExercisesScreen(Screen):
             exercise_list.add_widget(item)
 
     def save_exercise(self, text):
-            if not text.strip():
-                return
-            conn = sqlite3.connect('tracker.db')
-            cursor = conn.cursor()
-            cursor.execute('INSERT INTO exercises (name) VALUES (?)', (text,))
-            conn.commit()
-            conn.close()
-            self.ids.exercise_name.text = ''
-            self.load_exercises()
+        if not text.strip():
+            return
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        cursor.execute('INSERT INTO exercises (name) VALUES (?)', (text,))
+        conn.commit()
+        conn.close()
+        self.ids.exercise_name.text = ''
+        self.load_exercises()
 
 class TrackerApp(App):
     def build(self):
@@ -139,31 +137,11 @@ class TrackerApp(App):
     def init_db(self):
         conn = sqlite3.connect('tracker.db')
         cursor = conn.cursor()
-
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS exercises
-            (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)
-        ''')
-
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS workouts
-            (id INTEGER PRIMARY KEY AUTOINCREMENT, 
-            date TEXT NOT NULL,
-            bodyweight REAL)
-        ''')
-
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS workout_sets
-            (id INTEGER PRIMARY KEY AUTOINCREMENT,
-            workout_id INTEGER NOT NULL,
-            exercise_id INTEGER NOT NULL,
-            sets INTEGER NOT NULL,
-            reps INTEGER NOT NULL,
-            weight REAL NOT NULL)
-        ''')
-        
+        cursor.execute('CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS workouts (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, bodyweight REAL, description TEXT)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS workout_sets (id INTEGER PRIMARY KEY AUTOINCREMENT, workout_id INTEGER NOT NULL, exercise_id INTEGER NOT NULL, sets INTEGER NOT NULL, reps INTEGER NOT NULL, weight REAL NOT NULL)')
         conn.commit()
         conn.close()
 
-if __name__=='__main__':
+if __name__ == '__main__':
     TrackerApp().run()
