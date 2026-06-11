@@ -2,32 +2,35 @@ ScreenManager:
     MenuScreen:
     EditorScreen:
     ExercisesScreen:
+    WorkoutsScreen:
+    NewWorkoutScreen:
 
 <MenuScreen>:
     name: 'menu'
     BoxLayout:
         orientation: 'vertical'
-        padding: 50
-        spacing: 20
+        padding: 40
+        spacing: 15
         Label:
-            text: 'Трекер Тренировок'
-            font_size: '24sp'
+            text: 'Трекер тренировок'
         Button:
             text: 'Мои тренировки'
+            on_press: root.manager.current='workouts'
         Button:
             text: 'Редактор'
             on_press: root.manager.current = 'editor'
+
 
 <EditorScreen>:
     name: 'editor'
     BoxLayout:
         orientation: 'vertical'
-        padding: 20
-        spacing: 10
+        padding: 40
+        spacing: 15
+        Label:
+            text: 'Редактор'
         Button:
-            text: 'Редактор тренировок'
-        Button:
-            text: 'Редактор упражнений'
+            text: 'Упражнения'
             on_press: root.manager.current = 'exercises'
         Button:
             text: 'Назад'
@@ -35,40 +38,83 @@ ScreenManager:
 
 <ExercisesScreen>:
     name: 'exercises'
-    on_enter: self.load_exercises() 
     BoxLayout:
         orientation: 'vertical'
-        padding: 10
-        spacing: 10
-        Button:
-            text: 'Назад в редактор'
+        padding: 40
+        spacing: 15
+        Label:
+            text: 'Упражнения'
             size_hint_y: 0.1
-            on_press: root.manager.current = 'editor'
         TextInput:
             id: exercise_name
-            hint_text: 'Новое упражнение'
+            hint_text: 'Название упражнения'
             size_hint_y: 0.1
         Button:
             text: 'Сохранить'
             size_hint_y: 0.1
-            on_press: 
-                app.save_exercise(exercise_name.text)
-                exercise_name.text = ''
-        RecycleView:
-            id: exercise_list
-            viewclass: 'ExerciseItem'
-            RecycleBoxLayout:
-                default_size: None, dp(50)
-                default_size_hint: 1, None
+            on_press: root.save_exercise(exercise_name.text)
+        ScrollView:
+            id: scroll
+            BoxLayout:
+                id: exercise_list
+                orientation: 'vertical'
                 size_hint_y: None
                 height: self.minimum_height
-                orientation: 'vertical'
+                spacing: 10
+        Button:
+            text: 'Назад'
+            size_hint_y: 0.1
+            on_press: root.manager.current = 'editor'
 
-<ExerciseItem>:
-    orientation: 'horizontal'
-    Label:
-        text: root.text
-    Button:
-        text: 'X'
-        size_hint_x: 0.2
-        on_press: root.delete_exercise()
+
+<WorkoutsScreen>:
+    name: 'workouts'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 40
+        spacing: 15
+        Label:
+            text: 'Мои тренировки'
+            size_hint_y: 0.1
+        Button:
+            text: 'Новая тренировка'
+            size_hint_y: 0.1
+            on_press: root.manager.current = 'new_workout'
+        ScrollView:
+            BoxLayout:
+                id: workout_list
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 10
+        Button:
+            text: 'Назад'
+            size_hint_y: 0.1
+            on_press: root.manager.current = 'menu'
+
+<NewWorkoutScreen>:
+    name: 'new_workout'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 40
+        spacing: 15
+        Label:
+            text: 'Новая тренировка'
+            size_hint_y: 0.1
+        TextInput:
+            id: workout_date
+            hint_text: 'Дата (например 10.06.2024)'
+            size_hint_y: 0.1
+        TextInput:
+            id: bodyweight
+            hint_text: 'Вес тела (необязательно)'
+            input_filter: 'float'
+            size_hint_y: 0.1
+        Button:
+            text: 'Создать'
+            size_hint_y: 0.1
+            on_press: root.create_workout(workout_date.text, bodyweight.text)
+        Button:
+            text: 'Назад'
+            size_hint_y: 0.1
+            on_press: root.manager.current = 'workouts'
