@@ -39,12 +39,34 @@ class NewWorkoutScreen(Screen):
         self.ids.bodyweight.text = ''
         self.manager.current = 'workouts'
 
+
+class WorkoutItem(BoxLayout):
+    def __init__(self, workout_id, date, screen, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'horizontal'
+        self.size_hint_y = None
+        self.height = 50
+        self.add_widget(Button(text=date))
+
+        btn = Button(text='X', size_hint_x=0.2)
+        btn.bind(on_press=lambda x: self.delete_workout(workout_id, screen))
+        self.add_widget(btn)
+
+    def delete_workout(self, workout_id, screen):
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM workouts WHERE id = ?', (workout_id,))
+        conn.commit()
+        conn.close()
+        screen.load_workouts()
+
+
 class WorkoutsScreen(Screen):
     def on_enter(self):
         self.load_workouts()
 
     def load_workouts(self):
-        workout_list=self.ids.workout_list
+        workout_list = self.ids.workout_list
         workout_list.clear_widgets()
     
         conn = sqlite3.connect('tracker.db')
@@ -54,8 +76,8 @@ class WorkoutsScreen(Screen):
         conn.close()
 
         for row in rows:
-            btn = Button(text=row[1], size_hint_y=None, height=50)
-            workout_list.add_widget(btn)
+            item = WorkoutItem(workout_id=row[0], date=row[1], screen=self)
+            workout_list.add_widget(item)
 
         
 class ExerciseItem(BoxLayout):

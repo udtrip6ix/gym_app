@@ -29,11 +29,15 @@ ScreenManager:
         spacing: 15
         Label:
             text: 'Редактор'
+            size_hint_y: 0.1
         Button:
             text: 'Упражнения'
+            size_hint_y: 0.1
             on_press: root.manager.current = 'exercises'
+        Widget: 
         Button:
             text: 'Назад'
+            size_hint_y: 0.1
             on_press: root.manager.current = 'menu'
 
 <ExercisesScreen>:
@@ -114,7 +118,9 @@ ScreenManager:
             text: 'Создать'
             size_hint_y: 0.1
             on_press: root.create_workout(workout_date.text, bodyweight.text)
+        Widget:
         Button:
             text: 'Назад'
-            size_hint_y: 0.1
+            size_hint_y: 0.12
             on_press: root.manager.current = 'workouts'
+        
