@@ -4,6 +4,7 @@ ScreenManager:
     ExercisesScreen:
     WorkoutsScreen:
     NewWorkoutScreen:
+    ExercisePickerScreen:
 
 <MenuScreen>:
     name: 'menu'
@@ -20,6 +21,27 @@ ScreenManager:
             text: 'Редактор'
             on_press: root.manager.current = 'editor'
 
+
+<ExercisePickerScreen>:
+    name: 'exercise_picker'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 40
+        spacing: 15
+        Label:
+            text: 'Выберите упражнение'
+            size_hint_y: 0.1
+        ScrollView:
+            BoxLayout:
+                id: picker_list
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 5
+        Button:
+            text: 'Назад'
+            size_hint_y: 0.1
+            on_press: root.manager.current = 'new_workout'
 
 <EditorScreen>:
     name: 'editor'
@@ -108,23 +130,39 @@ ScreenManager:
         TextInput:
             id: workout_desc
             hint_text: 'Описание тренировки'
-            size_hint_y: 0.1
-        TextInput:
-            id: workout_date
-            hint_text: 'Дата (например 10.06.2024)'
-            size_hint_y: 0.1
+            size_hint_y: 0.2
+        BoxLayout:
+            size_hint_y: 0.2
+            spacing: 5
+            TextInput:
+                id: workout_date
+                hint_text: 'Дата'
+            Button:
+                text: 'Сегодня'
+                size_hint_x: 0.35
+                on_press: root.set_today_date()
         TextInput:
             id: bodyweight
             hint_text: 'Вес тела (необязательно)'
             input_filter: 'float'
-            size_hint_y: 0.1
+            size_hint_y: 0.2
+        Button:
+            text: 'Добавить упражнение'
+            size_hint_y: 0.2
+            on_press: root.manager.current = 'exercise_picker'
+        ScrollView:
+            BoxLayout:
+                id: selected_exercises
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 5
         Button:
             text: 'Создать'
-            size_hint_y: 0.1
+            size_hint_y: 0.2
             on_press: root.create_workout(workout_date.text, bodyweight.text, workout_desc.text)
-        Widget:
         Button:
             text: 'Назад'
-            size_hint_y: 0.12
+            size_hint_y: 0.2
             on_press: root.manager.current = 'workouts'
         

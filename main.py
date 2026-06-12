@@ -10,12 +10,43 @@ from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 import sqlite3
+from datetime import date
 
 class MenuScreen(Screen):
     pass
 
 class EditorScreen(Screen):
     pass
+
+
+class ExercisePickerScreen(Screen):
+    def on_enter(self):
+        self.load_exercises()
+
+    def load_exercises(self):
+        picker_list = self.ids.picker_list
+        picker_list.clear_widgets()
+
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, name FROM exercises')
+        rows = cursor.fetchall()
+        conn.close()
+
+        for row in rows:
+            btn = Button(
+                text=row[1],
+                size_hint_y=None,
+                height=50
+            )
+            btn.bind(on_press=lambda x, eid=row[0], ename=row[1]: self.select_exercise(eid, ename))
+            picker_list.add_widget(btn)
+
+    def select_exercise(self, exercise_id, exercise_name):
+        self.manager.current = 'new_workout'
+        new_workout_screen = self.manager.get_screen('new_workout')
+        new_workout_screen.on_exercise_selected(exercise_id, exercise_name)
+        
 
 class NewWorkoutScreen(Screen):
     def create_workout(self, date, bodyweight, description):
@@ -33,6 +64,9 @@ class NewWorkoutScreen(Screen):
         self.ids.bodyweight.text = ''
         self.ids.workout_desc.text = ''
         self.manager.current = 'workouts'
+    def set_today_date(self):
+        from datetime import date
+        self.ids.workout_date.text = date.today().strftime('%d.%m.%Y')
 
 class WorkoutItem(BoxLayout):
     def __init__(self, workout_id, date, bodyweight, description, screen, **kwargs):
@@ -40,15 +74,27 @@ class WorkoutItem(BoxLayout):
         self.orientation = 'horizontal'
         self.size_hint_y = None
         self.height = 80
-        
-        info_box = BoxLayout(orientation='vertical')
-        info_box.add_widget(Label(text=description or "Без описания", bold=True))
-        info_box.add_widget(Label(text=f"Дата: {date} | Вес: {bodyweight or '-'}", font_size='12sp'))
-        self.add_widget(info_box)
-        
-        btn = Button(text='X', size_hint_x=0.2)
-        btn.bind(on_press=lambda x: self.delete_workout(workout_id, screen))
-        self.add_widget(btn)
+
+        btn_main = Button(
+            text=f"{description or 'Без описания'}\n{date} | Вес: {bodyweight or '-'}",
+            halign='center',
+            valign='middle',
+        )
+        btn_main.bind(size=btn_main.setter('text_size'))
+        btn_main.bind(on_press=lambda x: screen.open_workout(workout_id))
+        self.add_widget(btn_main)
+
+        btn_delete = Button(text='X', size_hint_x=0.2)
+        btn_delete.bind(on_press=lambda x: self.delete_workout(workout_id, screen))
+        self.add_widget(btn_delete)
+
+    def delete_workout(self, workout_id, screen):
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM workouts WHERE id = ?', (workout_id,))
+        conn.commit()
+        conn.close()
+        screen.load_workouts()
 
     def delete_workout(self, workout_id, screen):
         conn = sqlite3.connect('tracker.db')
@@ -62,6 +108,9 @@ class WorkoutsScreen(Screen):
     def on_enter(self):
         self.load_workouts()
 
+    def open_workout(self, workout_id):
+        pass
+    
     def load_workouts(self):
         workout_list = self.ids.workout_list
         workout_list.clear_widgets()
