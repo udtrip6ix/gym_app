@@ -50,7 +50,7 @@ class PickerItem(BoxLayout):
         self.name_input.bind(on_text_validate=lambda x: self.save_name())
         self.add_widget(self.name_input)
 
-        btn_add = Button(text='Добавить', size_hint_x=0.4)
+        btn_add = Button(text='Доб.', size_hint_x=0.2, font_size='13sp')
         btn_add.bind(on_press=lambda x: self.add_to_workout())
         self.add_widget(btn_add)
 
@@ -162,12 +162,13 @@ class WorkoutItem(BoxLayout):
             text=f"{description or 'Без описания'}\n{date} | Вес: {bodyweight or '-'}",
             halign='center',
             valign='middle',
+            font_size= '14sp'
         )
         btn_main.bind(size=btn_main.setter('text_size'))
         btn_main.bind(on_press=lambda x: screen.open_workout(workout_id))
         self.add_widget(btn_main)
 
-        btn_edit = Button(text='✎', size_hint_x=0.22)
+        btn_edit = Button(text='Ред.', size_hint_x=0.22, font_size= '14sp')
         btn_edit.bind(on_press=lambda x: screen.edit_workout(
             workout_id, date, bodyweight, description
         ))

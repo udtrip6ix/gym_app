@@ -2,6 +2,7 @@
     background_normal: ''
     background_color: 0, 0, 0, 0
     color: 1, 1, 1, 1
+    font_name: 'fonts/1.otf'
     canvas.before:
         Color:
             rgba: 1, 1, 1, 0.15
@@ -21,6 +22,7 @@
     hint_text_color: 1, 1, 1, 0.8
     cursor_color: 1, 1, 1, 1
     padding: [10, 10, 10, 10]
+    font_name: 'fonts/1.otf'
     canvas.before:
         Color:
             rgba: 1, 1, 1, 0.15
@@ -33,6 +35,10 @@
         Line:
             rounded_rectangle: self.x, self.y, self.width, self.height, 10
             width: 1.2
+<Label>:
+    font_name: 'fonts/1.otf'
+    font_size: '20sp'
+    color: 1, 1, 1, 1
 ScreenManager:
     canvas.before:
         Color:
@@ -55,7 +61,8 @@ ScreenManager:
         padding: 20
         spacing: 15
         Label:
-            text: 'Трекер тренировок'
+            text: 'ТРЕКЕР ТРЕНИРОВОК'
+            font_size: '24sp'
         Button:
             text: 'Мои тренировки'
             on_press: root.manager.current='workouts'
@@ -117,7 +124,7 @@ ScreenManager:
                 hint_text: 'Новое упражнение'
             Button:
                 text: '+'
-                size_hint_x: 0.25
+                size_hint_x: 0.2
                 on_press: root.save_exercise(exercise_name.text)
         ScrollView:
             id: scroll
@@ -181,6 +188,7 @@ ScreenManager:
                 text: 'Сегодня'
                 size_hint_x: 0.35
                 on_press: root.set_today_date()
+                font_size:'13sp'
         TextInput:
             id: bodyweight
             hint_text: 'Вес тела (необязательно)'
