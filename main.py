@@ -25,6 +25,7 @@ class SelectedExerciseItem(BoxLayout):
         self.height = 50
         self.exercise_id = exercise_id
         self.screen = screen
+        self.spacing = 5 
 
         self.add_widget(Label(text=name))
 
@@ -43,16 +44,17 @@ class PickerItem(BoxLayout):
         self.height = 50
         self.exercise_id = exercise_id
         self.screen = screen
+        self.spacing = 5 
 
         self.name_input = TextInput(text=name, multiline=False)
         self.name_input.bind(on_text_validate=lambda x: self.save_name())
         self.add_widget(self.name_input)
 
-        btn_add = Button(text='Add', size_hint_x=0.3)
+        btn_add = Button(text='Добавить', size_hint_x=0.4)
         btn_add.bind(on_press=lambda x: self.add_to_workout())
         self.add_widget(btn_add)
 
-        btn_del = Button(text='X', size_hint_x=0.15)
+        btn_del = Button(text='X', size_hint_x=0.2)
         btn_del.bind(on_press=lambda x: self.delete_exercise())
         self.add_widget(btn_del)
 
@@ -153,7 +155,8 @@ class WorkoutItem(BoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint_y = None
-        self.height = 80
+        self.height = 53
+        self.spacing = 5 
 
         btn_main = Button(
             text=f"{description or 'Без описания'}\n{date} | Вес: {bodyweight or '-'}",
@@ -164,13 +167,13 @@ class WorkoutItem(BoxLayout):
         btn_main.bind(on_press=lambda x: screen.open_workout(workout_id))
         self.add_widget(btn_main)
 
-        btn_edit = Button(text='✎', size_hint_x=0.15)
+        btn_edit = Button(text='✎', size_hint_x=0.22)
         btn_edit.bind(on_press=lambda x: screen.edit_workout(
             workout_id, date, bodyweight, description
         ))
         self.add_widget(btn_edit)
 
-        btn_delete = Button(text='X', size_hint_x=0.15)
+        btn_delete = Button(text='X', size_hint_x=0.22)
         btn_delete.bind(on_press=lambda x: self.delete_workout(workout_id, screen))
         self.add_widget(btn_delete)
 
@@ -226,6 +229,7 @@ class ExerciseItem(BoxLayout):
         self.size_hint_y = None
         self.height = 50
         self.exercise_id = exercise_id
+        self.spacing = 5 
 
         self.name_input = TextInput(text=name, multiline=False)
         self.name_input.bind(on_text_validate=lambda x: self.save_name())

@@ -1,15 +1,58 @@
+<Button>:
+    background_normal: ''
+    background_color: 0, 0, 0, 0
+    color: 1, 1, 1, 1
+    canvas.before:
+        Color:
+            rgba: 1, 1, 1, 0.15
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [10]
+        Color:
+            rgba: 1, 1, 1, 0.6
+        Line:
+            rounded_rectangle: self.x, self.y, self.width, self.height, 10
+            width: 1.2
+<TextInput>:
+    background_normal: ''
+    background_color: 0, 0, 0, 0
+    foreground_color: 1, 1, 1, 1
+    hint_text_color: 1, 1, 1, 0.8
+    cursor_color: 1, 1, 1, 1
+    padding: [10, 10, 10, 10]
+    canvas.before:
+        Color:
+            rgba: 1, 1, 1, 0.15
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [10]
+        Color:
+            rgba: 1, 1, 1, 0.6
+        Line:
+            rounded_rectangle: self.x, self.y, self.width, self.height, 10
+            width: 1.2
 ScreenManager:
+    canvas.before:
+        Color:
+            rgba: 1, 1, 1, 1
+        Rectangle:
+            source: 'Images/bg.png'
+            pos: self.pos
+            size: self.size
     MenuScreen:
     ExercisesScreen:
     WorkoutsScreen:
     NewWorkoutScreen:
     ExercisePickerScreen:
 
+
 <MenuScreen>:
     name: 'menu'
     BoxLayout:
         orientation: 'vertical'
-        padding: 40
+        padding: 20
         spacing: 15
         Label:
             text: 'Трекер тренировок'
@@ -20,14 +63,16 @@ ScreenManager:
         Button:
             text: 'Редактор упражнений'
             on_press: root.manager.current = 'exercises'
-            size_hint_y: 0.1
+            size_hint_y: 0.2
+        Widget:
+            size_hint_y: 0.2
 
 
 <ExercisePickerScreen>:
     name: 'exercise_picker'
     BoxLayout:
         orientation: 'vertical'
-        padding: 40
+        padding: 20
         spacing: 15
         Label:
             text: 'Выберите упражнение'
@@ -59,7 +104,7 @@ ScreenManager:
     name: 'exercises'
     BoxLayout:
         orientation: 'vertical'
-        padding: 40
+        padding: 20
         spacing: 15
         Label:
             text: 'Упражнения'
@@ -92,7 +137,7 @@ ScreenManager:
     name: 'workouts'
     BoxLayout:
         orientation: 'vertical'
-        padding: 40
+        padding: 20
         spacing: 15
         Label:
             text: 'Мои тренировки'
@@ -117,7 +162,7 @@ ScreenManager:
     name: 'new_workout'
     BoxLayout:
         orientation: 'vertical'
-        padding: 40
+        padding: 20
         spacing: 15
         Label:
             text: 'Новая тренировка'
