@@ -1,6 +1,5 @@
 ScreenManager:
     MenuScreen:
-    EditorScreen:
     ExercisesScreen:
     WorkoutsScreen:
     NewWorkoutScreen:
@@ -17,9 +16,11 @@ ScreenManager:
         Button:
             text: 'Мои тренировки'
             on_press: root.manager.current='workouts'
+            size_hint_y: 0.3
         Button:
-            text: 'Редактор'
-            on_press: root.manager.current = 'editor'
+            text: 'Редактор упражнений'
+            on_press: root.manager.current = 'exercises'
+            size_hint_y: 0.1
 
 
 <ExercisePickerScreen>:
@@ -31,6 +32,16 @@ ScreenManager:
         Label:
             text: 'Выберите упражнение'
             size_hint_y: 0.1
+        BoxLayout:
+            size_hint_y: 0.1
+            spacing: 5
+            TextInput:
+                id: exercise_name
+                hint_text: 'Новое упражнение'
+            Button:
+                text: '+'
+                size_hint_x: 0.2
+                on_press: root.save_exercise(exercise_name.text)
         ScrollView:
             BoxLayout:
                 id: picker_list
@@ -43,24 +54,6 @@ ScreenManager:
             size_hint_y: 0.1
             on_press: root.manager.current = 'new_workout'
 
-<EditorScreen>:
-    name: 'editor'
-    BoxLayout:
-        orientation: 'vertical'
-        padding: 40
-        spacing: 15
-        Label:
-            text: 'Редактор'
-            size_hint_y: 0.1
-        Button:
-            text: 'Упражнения'
-            size_hint_y: 0.1
-            on_press: root.manager.current = 'exercises'
-        Widget: 
-        Button:
-            text: 'Назад'
-            size_hint_y: 0.1
-            on_press: root.manager.current = 'menu'
 
 <ExercisesScreen>:
     name: 'exercises'
@@ -71,14 +64,16 @@ ScreenManager:
         Label:
             text: 'Упражнения'
             size_hint_y: 0.1
-        TextInput:
-            id: exercise_name
-            hint_text: 'Название упражнения'
+        BoxLayout:
             size_hint_y: 0.1
-        Button:
-            text: 'Сохранить'
-            size_hint_y: 0.1
-            on_press: root.save_exercise(exercise_name.text)
+            spacing: 5
+            TextInput:
+                id: exercise_name
+                hint_text: 'Новое упражнение'
+            Button:
+                text: '+'
+                size_hint_x: 0.25
+                on_press: root.save_exercise(exercise_name.text)
         ScrollView:
             id: scroll
             BoxLayout:
@@ -89,8 +84,8 @@ ScreenManager:
                 spacing: 10
         Button:
             text: 'Назад'
-            size_hint_y: 0.1
-            on_press: root.manager.current = 'editor'
+            size_hint_y: 0.115
+            on_press: root.manager.current = 'menu'
 
 
 <WorkoutsScreen>:
@@ -102,10 +97,6 @@ ScreenManager:
         Label:
             text: 'Мои тренировки'
             size_hint_y: 0.1
-        Button:
-            text: 'Новая тренировка'
-            size_hint_y: 0.1
-            on_press: root.manager.current = 'new_workout'
         ScrollView:
             BoxLayout:
                 id: workout_list
@@ -113,6 +104,10 @@ ScreenManager:
                 size_hint_y: None
                 height: self.minimum_height
                 spacing: 10
+        Button:
+            text: 'Новая тренировка'
+            size_hint_y: 0.1
+            on_press: root.manager.current = 'new_workout'
         Button:
             text: 'Назад'
             size_hint_y: 0.1
@@ -146,10 +141,6 @@ ScreenManager:
             hint_text: 'Вес тела (необязательно)'
             input_filter: 'float'
             size_hint_y: 0.2
-        Button:
-            text: 'Добавить упражнение'
-            size_hint_y: 0.2
-            on_press: root.manager.current = 'exercise_picker'
         ScrollView:
             BoxLayout:
                 id: selected_exercises
@@ -158,6 +149,11 @@ ScreenManager:
                 height: self.minimum_height
                 spacing: 5
         Button:
+            text: 'Добавить упражнение'
+            size_hint_y: 0.2
+            on_press: root.manager.current = 'exercise_picker'
+        Button:
+            id: submit_btn
             text: 'Создать'
             size_hint_y: 0.2
             on_press: root.create_workout(workout_date.text, bodyweight.text, workout_desc.text)
