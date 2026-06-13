@@ -2,7 +2,7 @@
     background_normal: ''
     background_color: 0, 0, 0, 0
     color: 1, 1, 1, 1
-    font_name: 'fonts/1.otf'
+    font_name: 'fonts/7.otf'
     canvas.before:
         Color:
             rgba: 1, 1, 1, 0.15
@@ -22,7 +22,7 @@
     hint_text_color: 1, 1, 1, 0.8
     cursor_color: 1, 1, 1, 1
     padding: [10, 10, 10, 10]
-    font_name: 'fonts/1.otf'
+    font_name: 'fonts/7.otf'
     canvas.before:
         Color:
             rgba: 1, 1, 1, 0.15
@@ -36,7 +36,7 @@
             rounded_rectangle: self.x, self.y, self.width, self.height, 10
             width: 1.2
 <Label>:
-    font_name: 'fonts/1.otf'
+    font_name: 'fonts/7.otf'
     font_size: '20sp'
     color: 1, 1, 1, 1
 ScreenManager:
@@ -44,7 +44,7 @@ ScreenManager:
         Color:
             rgba: 1, 1, 1, 1
         Rectangle:
-            source: 'Images/bg.png'
+            source: 'Images/3.png'
             pos: self.pos
             size: self.size
     MenuScreen:
@@ -62,7 +62,8 @@ ScreenManager:
         spacing: 15
         Label:
             text: 'ТРЕКЕР ТРЕНИРОВОК'
-            font_size: '24sp'
+            font_size: '30sp'
+            font_name: 'fonts/2.otf'
         Button:
             text: 'Мои тренировки'
             on_press: root.manager.current='workouts'
@@ -71,8 +72,7 @@ ScreenManager:
             text: 'Редактор упражнений'
             on_press: root.manager.current = 'exercises'
             size_hint_y: 0.2
-        Widget:
-            size_hint_y: 0.2
+
 
 
 <ExercisePickerScreen>:
@@ -84,6 +84,8 @@ ScreenManager:
         Label:
             text: 'Выберите упражнение'
             size_hint_y: 0.1
+            font_size: '22sp'
+            font_name: 'fonts/2.otf'
         BoxLayout:
             size_hint_y: 0.1
             spacing: 5
@@ -92,7 +94,7 @@ ScreenManager:
                 hint_text: 'Новое упражнение'
             Button:
                 text: '+'
-                size_hint_x: 0.2
+                size_hint_x: 0.15
                 on_press: root.save_exercise(exercise_name.text)
         ScrollView:
             BoxLayout:
@@ -116,6 +118,8 @@ ScreenManager:
         Label:
             text: 'Упражнения'
             size_hint_y: 0.1
+            font_size: '25sp'
+            font_name: 'fonts/2.otf'
         BoxLayout:
             size_hint_y: 0.1
             spacing: 5
@@ -124,7 +128,7 @@ ScreenManager:
                 hint_text: 'Новое упражнение'
             Button:
                 text: '+'
-                size_hint_x: 0.2
+                size_hint_x: 0.15
                 on_press: root.save_exercise(exercise_name.text)
         ScrollView:
             id: scroll
@@ -149,6 +153,8 @@ ScreenManager:
         Label:
             text: 'Мои тренировки'
             size_hint_y: 0.1
+            font_size: '27sp'
+            font_name: 'fonts/2.otf'
         ScrollView:
             BoxLayout:
                 id: workout_list
@@ -160,6 +166,7 @@ ScreenManager:
             text: 'Новая тренировка'
             size_hint_y: 0.1
             on_press: root.manager.current = 'new_workout'
+            
         Button:
             text: 'Назад'
             size_hint_y: 0.1
@@ -174,6 +181,8 @@ ScreenManager:
         Label:
             text: 'Новая тренировка'
             size_hint_y: 0.1
+            font_size: '25sp'
+            font_name: 'fonts/2.otf'
         TextInput:
             id: workout_desc
             hint_text: 'Описание тренировки'
@@ -188,7 +197,7 @@ ScreenManager:
                 text: 'Сегодня'
                 size_hint_x: 0.35
                 on_press: root.set_today_date()
-                font_size:'13sp'
+                font_size:'15sp'
         TextInput:
             id: bodyweight
             hint_text: 'Вес тела (необязательно)'
