@@ -52,6 +52,7 @@ ScreenManager:
     WorkoutsScreen:
     NewWorkoutScreen:
     ExercisePickerScreen:
+    CopyWorkoutScreen:
 
 
 <MenuScreen>:
@@ -188,21 +189,21 @@ ScreenManager:
             hint_text: 'Описание тренировки'
             size_hint_y: 0.2
         BoxLayout:
-            size_hint_y: 0.2
+            size_hint_y: 0.15
             spacing: 5
+            TextInput:
+                id: bodyweight
+                hint_text: 'Вес'
+                input_filter: 'float'
+                size_hint_x: 0.5
             TextInput:
                 id: workout_date
                 hint_text: 'Дата'
             Button:
                 text: 'Сегодня'
-                size_hint_x: 0.35
+                size_hint_x: 0.45
                 on_press: root.set_today_date()
-                font_size:'15sp'
-        TextInput:
-            id: bodyweight
-            hint_text: 'Вес тела (необязательно)'
-            input_filter: 'float'
-            size_hint_y: 0.2
+                font_size: '15sp'
         ScrollView:
             BoxLayout:
                 id: selected_exercises
@@ -212,15 +213,39 @@ ScreenManager:
                 spacing: 5
         Button:
             text: 'Добавить упражнение'
-            size_hint_y: 0.2
+            size_hint_y: 0.15
             on_press: root.manager.current = 'exercise_picker'
+        Button:
+            text: 'Скопировать существующую'
+            size_hint_y: 0.15
+            on_press: root.manager.current = 'copy_workout'
         Button:
             id: submit_btn
             text: 'Создать'
-            size_hint_y: 0.2
+            size_hint_y: 0.15
             on_press: root.create_workout(workout_date.text, bodyweight.text, workout_desc.text)
         Button:
             text: 'Назад'
-            size_hint_y: 0.2
+            size_hint_y: 0.15
             on_press: root.manager.current = 'workouts'
-        
+
+<CopyWorkoutScreen>:
+    name: 'copy_workout'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 20
+        spacing: 15
+        Label:
+            text: 'Выберите тренировку'
+            size_hint_y: 0.1
+        ScrollView:
+            BoxLayout:
+                id: copy_list
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 10
+        Button:
+            text: 'Назад'
+            size_hint_y: 0.1
+            on_press: root.manager.current = 'new_workout'
