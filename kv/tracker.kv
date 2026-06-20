@@ -76,11 +76,15 @@ ScreenManager:
         orientation: 'vertical'
         padding: 20
         spacing: 15
+        
         Label:
             id: exercise_title
             text: ''
-            size_hint_y: 0.1
-            font_size: '20sp'
+            size_hint_y: 0.15
+            font_size: '35sp'
+            font_name: 'fonts/7.otf'
+            bold: True
+            
         ScrollView:
             BoxLayout:
                 id: sets_list
@@ -88,6 +92,7 @@ ScreenManager:
                 size_hint_y: None
                 height: self.minimum_height
                 spacing: 10
+                
         Button:
             text: 'Назад'
             size_hint_y: 0.1
@@ -100,7 +105,9 @@ ScreenManager:
         padding: 20
         spacing: 15
         Label:
-            text: 'Упражнения тренировки'
+            text: 'Упражнения'
+            font_name: 'fonts/2.otf'
+            font_size: '26sp'
             size_hint_y: 0.1
         ScrollView:
             BoxLayout:

@@ -471,13 +471,13 @@ class WorkoutItem(BoxLayout):
             text=f"{description or 'Без описания'}\n{date} | Вес: {bodyweight or '-'}",
             halign='center',
             valign='middle',
-            font_size= '14sp'
+            font_size= '16sp'
         )
         btn_main.bind(size=btn_main.setter('text_size'))
         btn_main.bind(on_press=lambda x: screen.open_workout(workout_id))
         self.add_widget(btn_main)
 
-        btn_edit = Button(text='Ред.', size_hint_x=0.22, font_size= '14sp')
+        btn_edit = Button(text='Ред.', size_hint_x=0.22, font_size= '16sp')
         btn_edit.bind(on_press=lambda x: screen.edit_workout(
             workout_id, date, bodyweight, description
         ))
