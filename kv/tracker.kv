@@ -53,6 +53,29 @@ ScreenManager:
     NewWorkoutScreen:
     ExercisePickerScreen:
     CopyWorkoutScreen:
+    WorkoutDetailScreen:
+
+
+<WorkoutDetailScreen>:
+    name: 'workout_detail'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 20
+        spacing: 15
+        Label:
+            text: 'Упражнения тренировки'
+            size_hint_y: 0.1
+        ScrollView:
+            BoxLayout:
+                id: detail_exercise_list
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 10
+        Button:
+            text: 'Назад'
+            size_hint_y: 0.1
+            on_press: root.manager.current = 'workouts'
 
 
 <MenuScreen>:

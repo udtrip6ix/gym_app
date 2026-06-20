@@ -16,6 +16,33 @@ from datetime import date
 class MenuScreen(Screen):
     pass
 
+class WorkoutDetailScreen(Screen):
+    def on_enter(self):
+        self.load_exercises()
+
+    def load_exercises(self):
+        ex_list=self.ids.detail_exercise_list
+        ex_list.clear_widgets()
+
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT e.id, e.name 
+            FROM workout_sets ws
+            JOIN exercises e ON ws.exercise_id = e.id
+            WHERE ws.workout_id = ?
+        ''', (self.workout_id,))
+        rows = cursor.fetchall()
+        conn.close()
+
+        for row in rows:
+            btn = Button(text=row[1], size_hint_y=None, height=50)
+            btn.bind(on_press=lambda x, eid=row[0], ename=row[1]: self.open_exercise(eid, ename))
+            ex_list.add_widget(btn)
+    
+    def open_exercise(self, exercise_id, exercise_name):
+        print(f'Открываем упражнение {exercise_name}')
+
 class CopyWorkoutScreen(Screen):
     def on_enter(self):
         self.load_workouts()
@@ -310,6 +337,11 @@ class WorkoutsScreen(Screen):
         screen.ids.workout_desc.text = description or ''
         screen.ids.submit_btn.text = 'Сохранить изменения'
         self.manager.current = 'new_workout'
+    
+    def open_workout(self, workout_id):
+        screen = self.manager.get_screen('workout_detail')
+        screen.workout_id = workout_id
+        self.manager.current = 'workout_detail'
 
 class ExerciseItem(BoxLayout):
     def __init__(self, exercise_id, name, screen, **kwargs):
