@@ -10,11 +10,203 @@ from kivy.uix.button import Button
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
+from kivy.uix.image import Image
+from kivy.uix.behaviors import ButtonBehavior
+from kivy.clock import Clock
 import sqlite3
+import time
 from datetime import date
+
+class SetTextInput(TextInput):
+    pass
+
 
 class MenuScreen(Screen):
     pass
+
+class ImageButton(ButtonBehavior, Image):
+    pass
+
+class ExerciseDetailScreen(Screen):
+    def load_sets(self, workout_id, exercise_id, exercise_name):
+        self.workout_id = workout_id
+        self.exercise_id = exercise_id
+        self.ids.exercise_title.text = exercise_name
+
+        sets_list = self.ids.sets_list
+        sets_list.clear_widgets()
+
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, set_number, weight, reps, completed, timer_seconds
+            FROM workout_sets 
+            WHERE workout_id=? AND exercise_id=?
+            ORDER BY set_number
+        ''', (workout_id, exercise_id))
+        rows = cursor.fetchall()
+        conn.close()
+
+        for row in rows:
+            item = SetItem(
+                set_id=row[0], set_number=row[1], weight=row[2], 
+                reps=row[3], completed=row[4], timer_seconds=row[5], screen=self
+            )
+            sets_list.add_widget(item)
+
+class SetItem(BoxLayout):
+    def __init__(self, set_id, set_number, weight, reps, completed, timer_seconds, screen, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'vertical'
+        self.size_hint_y = None
+        self.height = 240
+        self.spacing = 8
+        self.padding = 10
+        self.set_id = set_id
+        self.screen = screen
+        self.completed = completed
+        self.timer_running = False
+        self.timer_seconds = float(timer_seconds) if timer_seconds else 0.0
+        self.timer_event = None
+
+        with self.canvas.before:
+            from kivy.graphics import Color, RoundedRectangle
+            Color(1, 1, 1, 0.15)
+            self.bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[15])
+        self.bind(pos=self.update_bg, size=self.update_bg)
+
+        self.add_widget(Label(
+            text=f'Подход: {set_number}',
+            color=(1, 1, 1, 1),
+            size_hint_y=0.2,
+            font_size='22sp'
+        ))
+
+        row = BoxLayout(orientation='horizontal', spacing=8, size_hint_y=0.4)
+
+        weight_box = BoxLayout(orientation='vertical', spacing=2)
+        self.weight_input = SetTextInput(
+            text=str(weight) if weight else '',
+            hint_text='Вес кг',
+            input_filter='float',
+            multiline=False
+        )
+        self.weight_input.bind(on_text_validate=lambda *args: self.save_set())
+        self.weight_input.bind(focus=lambda *args: self.save_set() if not args[1] else None)
+        self.weight_input.bind(size=lambda *args: setattr(self.weight_input, 'text_size', self.weight_input.size))
+        weight_box.add_widget(self.weight_input)
+        row.add_widget(weight_box)
+
+        self.check_btn = ImageButton(
+            source='Images/checkbutton/2.png' if completed else 'Images/checkbutton/1.png',
+            size_hint_x=0.8
+        )
+        self.check_btn.bind(on_press=lambda x: self.toggle_completed())
+        row.add_widget(self.check_btn)
+
+        reps_box = BoxLayout(orientation='vertical', spacing=2)
+        self.reps_input = SetTextInput(
+            text=str(reps) if reps else '',
+            hint_text='Повторы',
+            input_filter='int',
+            multiline=False
+        )
+        self.reps_input.bind(on_text_validate=lambda *args: self.save_set())
+        self.reps_input.bind(focus=lambda *args: self.save_set() if not args[1] else None)
+        self.reps_input.bind(size=lambda *args: setattr(self.reps_input, 'text_size', self.reps_input.size))
+        reps_box.add_widget(self.reps_input)
+        row.add_widget(reps_box)
+
+        self.add_widget(row)
+
+        seconds_part = int(self.timer_seconds)
+        ms_part = int((self.timer_seconds - seconds_part) * 100)
+        
+        self.timer_btn = Button(
+            text=f'{seconds_part}.{ms_part:02d}',
+            size_hint_y=0.3,
+            font_size='25sp'
+        )
+        self.timer_btn.bind(on_press=lambda x: self.toggle_timer())
+        self.add_widget(self.timer_btn)
+
+        app = App.get_running_app()
+        if app and hasattr(app, 'active_timers') and set_id in app.active_timers:
+            self.timer_running = True
+            self.timer_event = Clock.schedule_interval(self.refresh_display, 0.05)
+        else:
+            self.timer_running = False
+
+    def update_bg(self, *args):
+        self.bg.pos = self.pos
+        self.bg.size = self.size
+
+    def save_set(self):
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        weight = float(self.weight_input.text) if self.weight_input.text.strip() else None
+        reps = int(self.reps_input.text) if self.reps_input.text.strip() else None
+        cursor.execute(
+            'UPDATE workout_sets SET weight=?, reps=? WHERE id=?',
+            (weight, reps, self.set_id)
+        )
+        conn.commit()
+        conn.close()
+
+    def toggle_completed(self):
+        self.completed = 0 if self.completed else 1
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        cursor.execute('UPDATE workout_sets SET completed=? WHERE id=?', (self.completed, self.set_id))
+        conn.commit()
+        conn.close()
+        self.check_btn.source = 'Images/checkbutton/2.png' if self.completed else 'Images/checkbutton/1.png'
+
+    def toggle_timer(self):
+        app = App.get_running_app()
+        
+
+        if self.timer_seconds > 0 and not self.timer_running:
+            self.timer_seconds = 0.0
+            self.save_timer()
+            self.timer_btn.text = '0.00'
+            return
+
+        if self.timer_running:
+            elapsed = time.time() - app.active_timers[self.set_id]
+            self.timer_seconds = elapsed
+            del app.active_timers[self.set_id]
+            self.timer_running = False
+            if self.timer_event:
+                self.timer_event.cancel()
+            self.save_timer()
+            
+            seconds_part = int(self.timer_seconds)
+            ms_part = int((self.timer_seconds - seconds_part) * 100)
+            self.timer_btn.text = f'{seconds_part}.{ms_part:02d}'
+        else:
+            app.active_timers[self.set_id] = time.time() - self.timer_seconds
+            self.timer_running = True
+            self.timer_event = Clock.schedule_interval(self.refresh_display, 0.05)
+
+    def refresh_display(self, dt):
+        app = App.get_running_app()
+        if self.set_id in app.active_timers:
+            elapsed = time.time() - app.active_timers[self.set_id]
+            seconds_part = int(elapsed)
+            ms_part = int((elapsed - seconds_part) * 100)
+            self.timer_btn.text = f'{seconds_part}.{ms_part:02d}'
+
+    def save_timer(self):
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        cursor.execute('UPDATE workout_sets SET timer_seconds=? WHERE id=?', (float(self.timer_seconds), self.set_id))
+        conn.commit()
+        conn.close()
+
+    
+
+
 
 class WorkoutDetailScreen(Screen):
     def on_enter(self):
@@ -41,7 +233,9 @@ class WorkoutDetailScreen(Screen):
             ex_list.add_widget(btn)
     
     def open_exercise(self, exercise_id, exercise_name):
-        print(f'Открываем упражнение {exercise_name}')
+        screen = self.manager.get_screen('exercise_detail')
+        screen.load_sets(self.workout_id, exercise_id, exercise_name)
+        self.manager.current = 'exercise_detail'
 
 class CopyWorkoutScreen(Screen):
     def on_enter(self):
@@ -253,8 +447,8 @@ class NewWorkoutScreen(Screen):
             workout_id = cursor.lastrowid
         for item in self.ids.selected_exercises.children:
             cursor.execute(
-                'INSERT INTO workout_sets (workout_id, exercise_id, sets, reps, weight) VALUES (?, ?, ?, ?, ?)',
-                (workout_id, item.exercise_id, 0, 0, 0)
+                'INSERT INTO workout_sets (workout_id, exercise_id, set_number, reps, weight, completed) VALUES (?, ?, ?, ?, ?, ?)',
+                (workout_id, item.exercise_id, 1, None, None, 0)
             )
 
         conn.commit()
@@ -407,6 +601,7 @@ class ExercisesScreen(Screen):
 class TrackerApp(App):
     def build(self):
         self.init_db()
+        self.active_timers = {}
         return Builder.load_file('kv/tracker.kv')
     
     def init_db(self):
@@ -414,7 +609,7 @@ class TrackerApp(App):
         cursor = conn.cursor()
         cursor.execute('CREATE TABLE IF NOT EXISTS exercises (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)')
         cursor.execute('CREATE TABLE IF NOT EXISTS workouts (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, bodyweight REAL, description TEXT)')
-        cursor.execute('CREATE TABLE IF NOT EXISTS workout_sets (id INTEGER PRIMARY KEY AUTOINCREMENT, workout_id INTEGER NOT NULL, exercise_id INTEGER NOT NULL, sets INTEGER NOT NULL, reps INTEGER NOT NULL, weight REAL NOT NULL)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS workout_sets (id INTEGER PRIMARY KEY AUTOINCREMENT, workout_id INTEGER NOT NULL, exercise_id INTEGER NOT NULL, set_number INTEGER NOT NULL, reps INTEGER, weight REAL, completed INTEGER DEFAULT 0, timer_seconds REAL DEFAULT 0.0)')
         conn.commit()
         conn.close()
 

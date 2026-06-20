@@ -23,6 +23,8 @@
     cursor_color: 1, 1, 1, 1
     padding: [10, 10, 10, 10]
     font_name: 'fonts/7.otf'
+    halign: 'center'
+    font_size: '17sp'
     canvas.before:
         Color:
             rgba: 1, 1, 1, 0.15
@@ -35,6 +37,14 @@
         Line:
             rounded_rectangle: self.x, self.y, self.width, self.height, 10
             width: 1.2
+<SetTextInput>:
+    background_normal: ''
+    background_color: 0, 0, 0, 0.7
+    foreground_color: 1, 1, 1, 1
+    font_size: '21sp'
+    halign: 'center'
+    multiline: False
+    padding: [0, (self.height - self.line_height) / 2, 0, (self.height - self.line_height) / 2]
 <Label>:
     font_name: 'fonts/7.otf'
     font_size: '20sp'
@@ -54,7 +64,34 @@ ScreenManager:
     ExercisePickerScreen:
     CopyWorkoutScreen:
     WorkoutDetailScreen:
+    ExerciseDetailScreen:
 
+
+
+
+
+<ExerciseDetailScreen>:
+    name: 'exercise_detail'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 20
+        spacing: 15
+        Label:
+            id: exercise_title
+            text: ''
+            size_hint_y: 0.1
+            font_size: '20sp'
+        ScrollView:
+            BoxLayout:
+                id: sets_list
+                orientation: 'vertical'
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 10
+        Button:
+            text: 'Назад'
+            size_hint_y: 0.1
+            on_press: root.manager.current = 'workout_detail'
 
 <WorkoutDetailScreen>:
     name: 'workout_detail'
