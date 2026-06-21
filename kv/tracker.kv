@@ -1,3 +1,5 @@
+#:kivy 2.0.0
+
 <Button>:
     background_normal: ''
     background_color: 0, 0, 0, 0
@@ -25,6 +27,8 @@
     font_name: 'fonts/7.otf'
     halign: 'center'
     font_size: '17sp'
+    multiline: False
+    padding: [0, (self.height - self.line_height) / 2, 0, (self.height - self.line_height) / 2]
     canvas.before:
         Color:
             rgba: 1, 1, 1, 0.15
@@ -62,13 +66,8 @@ ScreenManager:
     WorkoutsScreen:
     NewWorkoutScreen:
     ExercisePickerScreen:
-    CopyWorkoutScreen:
     WorkoutDetailScreen:
     ExerciseDetailScreen:
-
-
-
-
 
 <ExerciseDetailScreen>:
     name: 'exercise_detail'
@@ -80,7 +79,7 @@ ScreenManager:
         Label:
             id: exercise_title
             text: ''
-            size_hint_y: 0.15
+            size_hint_y: 0.1
             font_size: '35sp'
             font_name: 'fonts/7.otf'
             bold: True
@@ -92,11 +91,26 @@ ScreenManager:
                 size_hint_y: None
                 height: self.minimum_height
                 spacing: 10
-                
-        Button:
-            text: 'Назад'
-            size_hint_y: 0.1
-            on_press: root.manager.current = 'workout_detail'
+                vertical_direction: 'down'
+        
+        BoxLayout:
+            orientation: 'vertical'
+            size_hint_y: None
+            height: 135
+            spacing: 15
+            
+            Button:
+                text: '+'
+                font_size: '30sp'
+                size_hint_y: None
+                height: 60
+                on_press: root.add_new_set()
+
+            Button:
+                text: 'Назад'
+                size_hint_y: None
+                height: 60
+                on_press: root.manager.current = 'workout_detail'
 
 <WorkoutDetailScreen>:
     name: 'workout_detail'
@@ -104,23 +118,33 @@ ScreenManager:
         orientation: 'vertical'
         padding: 20
         spacing: 15
+        
         Label:
             text: 'Упражнения'
-            font_name: 'fonts/2.otf'
-            font_size: '26sp'
             size_hint_y: 0.1
+            font_size: '25sp'
+            font_name: 'fonts/2.otf'
+
         ScrollView:
             BoxLayout:
-                id: detail_exercise_list
+                id: detail_exercise_list 
                 orientation: 'vertical'
                 size_hint_y: None
                 height: self.minimum_height
                 spacing: 10
+                vertical_direction: 'down'
+
+        Button:
+            text: 'Добавить упражнение'
+            size_hint_y: None
+            height: 50
+            on_press: root.add_exercise_action()
+
         Button:
             text: 'Назад'
-            size_hint_y: 0.1
+            size_hint_y: None
+            height: 50
             on_press: root.manager.current = 'workouts'
-
 
 <MenuScreen>:
     name: 'menu'
@@ -140,8 +164,6 @@ ScreenManager:
             text: 'Редактор упражнений'
             on_press: root.manager.current = 'exercises'
             size_hint_y: 0.2
-
-
 
 <ExercisePickerScreen>:
     name: 'exercise_picker'
@@ -174,8 +196,9 @@ ScreenManager:
         Button:
             text: 'Назад'
             size_hint_y: 0.1
-            on_press: root.manager.current = 'new_workout'
-
+            on_press: 
+                root.manager.current = root.return_to
+                root.return_to = 'new_workout'
 
 <ExercisesScreen>:
     name: 'exercises'
@@ -206,11 +229,11 @@ ScreenManager:
                 size_hint_y: None
                 height: self.minimum_height
                 spacing: 10
+                vertical_direction: 'down'
         Button:
             text: 'Назад'
             size_hint_y: 0.115
             on_press: root.manager.current = 'menu'
-
 
 <WorkoutsScreen>:
     name: 'workouts'
@@ -219,6 +242,7 @@ ScreenManager:
         padding: 20
         spacing: 15
         Label:
+            id: screen_title
             text: 'Мои тренировки'
             size_hint_y: 0.1
             font_size: '27sp'
@@ -230,10 +254,13 @@ ScreenManager:
                 size_hint_y: None
                 height: self.minimum_height
                 spacing: 10
+                vertical_direction: 'down' 
         Button:
             text: 'Новая тренировка'
             size_hint_y: 0.1
-            on_press: root.manager.current = 'new_workout'
+            on_press: 
+                root.manager.get_screen('new_workout').ids.submit_btn.text = 'Создать'
+                root.new_workout_action()
             
         Button:
             text: 'Назад'
@@ -254,9 +281,10 @@ ScreenManager:
         TextInput:
             id: workout_desc
             hint_text: 'Описание тренировки'
-            size_hint_y: 0.2
+            size_hint_y: 0.1
+            font_size: '25sp'
         BoxLayout:
-            size_hint_y: 0.15
+            size_hint_y: 0.1
             spacing: 5
             TextInput:
                 id: bodyweight
@@ -271,48 +299,15 @@ ScreenManager:
                 size_hint_x: 0.45
                 on_press: root.set_today_date()
                 font_size: '15sp'
-        ScrollView:
-            BoxLayout:
-                id: selected_exercises
-                orientation: 'vertical'
-                size_hint_y: None
-                height: self.minimum_height
-                spacing: 5
-        Button:
-            text: 'Добавить упражнение'
-            size_hint_y: 0.15
-            on_press: root.manager.current = 'exercise_picker'
-        Button:
-            text: 'Скопировать существующую'
-            size_hint_y: 0.15
-            on_press: root.manager.current = 'copy_workout'
+        Widget:
+            size_hint_y: 0.2
+        
         Button:
             id: submit_btn
             text: 'Создать'
-            size_hint_y: 0.15
+            size_hint_y: 0.05
             on_press: root.create_workout(workout_date.text, bodyweight.text, workout_desc.text)
         Button:
             text: 'Назад'
-            size_hint_y: 0.15
-            on_press: root.manager.current = 'workouts'
-
-<CopyWorkoutScreen>:
-    name: 'copy_workout'
-    BoxLayout:
-        orientation: 'vertical'
-        padding: 20
-        spacing: 15
-        Label:
-            text: 'Выберите тренировку'
-            size_hint_y: 0.1
-        ScrollView:
-            BoxLayout:
-                id: copy_list
-                orientation: 'vertical'
-                size_hint_y: None
-                height: self.minimum_height
-                spacing: 10
-        Button:
-            text: 'Назад'
-            size_hint_y: 0.1
-            on_press: root.manager.current = 'new_workout'
+            size_hint_y: 0.05
+            on_press: root.go_back_action()

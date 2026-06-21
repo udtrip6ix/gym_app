@@ -20,7 +20,6 @@ from datetime import date
 class SetTextInput(TextInput):
     pass
 
-
 class MenuScreen(Screen):
     pass
 
@@ -32,7 +31,14 @@ class ExerciseDetailScreen(Screen):
         self.workout_id = workout_id
         self.exercise_id = exercise_id
         self.ids.exercise_title.text = exercise_name
+        self.refresh_sets()
 
+    def on_enter(self):
+        sets_list = self.ids.sets_list
+        if not sets_list.children:
+            self.add_new_set()
+
+    def refresh_sets(self):
         sets_list = self.ids.sets_list
         sets_list.clear_widgets()
 
@@ -42,17 +48,46 @@ class ExerciseDetailScreen(Screen):
             SELECT id, set_number, weight, reps, completed, timer_seconds
             FROM workout_sets 
             WHERE workout_id=? AND exercise_id=?
-            ORDER BY set_number
-        ''', (workout_id, exercise_id))
+            ORDER BY set_number DESC
+        ''', (self.workout_id, self.exercise_id))
         rows = cursor.fetchall()
         conn.close()
-
         for row in rows:
             item = SetItem(
                 set_id=row[0], set_number=row[1], weight=row[2], 
                 reps=row[3], completed=row[4], timer_seconds=row[5], screen=self
             )
             sets_list.add_widget(item)
+
+    def add_new_set(self):
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT MAX(set_number) FROM workout_sets 
+            WHERE workout_id=? AND exercise_id=?
+        ''', (self.workout_id, self.exercise_id))
+        max_set = cursor.fetchone()[0]
+        next_set_num = (max_set + 1) if max_set else 1
+
+        cursor.execute('''
+            INSERT INTO workout_sets (workout_id, exercise_id, set_number, reps, weight, completed, timer_seconds)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ''', (self.workout_id, self.exercise_id, next_set_num, None, None, 0, 0.0))
+        
+        conn.commit()
+        conn.close()
+        self.refresh_sets()
+
+        sets_list = self.ids.sets_list
+        if sets_list.children:
+            last_item = sets_list.children[-1]
+            parent = sets_list.parent
+            from kivy.uix.scrollview import ScrollView
+            while parent and not isinstance(parent, ScrollView):
+                parent = parent.parent
+            if parent:
+                Clock.schedule_once(lambda dt: parent.scroll_to(last_item), 0.1)
 
 class SetItem(BoxLayout):
     def __init__(self, set_id, set_number, weight, reps, completed, timer_seconds, screen, **kwargs):
@@ -75,12 +110,20 @@ class SetItem(BoxLayout):
             self.bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[15])
         self.bind(pos=self.update_bg, size=self.update_bg)
 
-        self.add_widget(Label(
+        top_bar = BoxLayout(orientation='horizontal', size_hint_y=0.2)
+        top_bar.add_widget(Label(
             text=f'Подход: {set_number}',
             color=(1, 1, 1, 1),
-            size_hint_y=0.2,
-            font_size='22sp'
+            font_size='22sp',
+            halign='left',
+            valign='middle'
         ))
+        if set_number > 1:
+            del_btn = Button(text='X', size_hint_x=None, width=40, font_size='18sp')
+            del_btn.bind(on_press=lambda x: self.delete_set())
+            top_bar.add_widget(del_btn)
+        
+        self.add_widget(top_bar)
 
         row = BoxLayout(orientation='horizontal', spacing=8, size_hint_y=0.4)
 
@@ -141,6 +184,15 @@ class SetItem(BoxLayout):
         self.bg.pos = self.pos
         self.bg.size = self.size
 
+    def delete_set(self):
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM workout_sets WHERE id = ?', (self.set_id,))
+        conn.commit()
+        conn.close()
+        if self.screen:
+            self.screen.refresh_sets()
+
     def save_set(self):
         conn = sqlite3.connect('tracker.db')
         cursor = conn.cursor()
@@ -164,7 +216,6 @@ class SetItem(BoxLayout):
 
     def toggle_timer(self):
         app = App.get_running_app()
-        
 
         if self.timer_seconds > 0 and not self.timer_running:
             self.timer_seconds = 0.0
@@ -204,110 +255,74 @@ class SetItem(BoxLayout):
         conn.commit()
         conn.close()
 
-    
+class WorkoutExerciseItem(BoxLayout):
+    def __init__(self, exercise_id, exercise_name, workout_id, screen, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'horizontal'
+        self.size_hint_y = None
+        self.height = 50
+        self.exercise_id = exercise_id
+        self.workout_id = workout_id
+        self.screen = screen
+        self.spacing = 5
 
+        btn_main = Button(text=exercise_name, size_hint_x=0.8)
+        btn_main.bind(on_press=lambda x: self.screen.open_exercise(exercise_id, exercise_name))
+        self.add_widget(btn_main)
 
+        btn_del = Button(text='X', size_hint_x=0.2)
+        btn_del.bind(on_press=lambda x: self.delete_exercise_from_workout())
+        self.add_widget(btn_del)
+
+    def delete_exercise_from_workout(self):
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        cursor.execute(
+            'DELETE FROM workout_sets WHERE workout_id = ? AND exercise_id = ?', 
+            (self.workout_id, self.exercise_id)
+        )
+        conn.commit()
+        conn.close()
+        self.screen.load_exercises()
 
 class WorkoutDetailScreen(Screen):
     def on_enter(self):
         self.load_exercises()
 
     def load_exercises(self):
-        ex_list=self.ids.detail_exercise_list
+        ex_list = self.ids.detail_exercise_list
         ex_list.clear_widgets()
 
         conn = sqlite3.connect('tracker.db')
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT e.id, e.name 
+            SELECT DISTINCT e.id, e.name 
             FROM workout_sets ws
             JOIN exercises e ON ws.exercise_id = e.id
             WHERE ws.workout_id = ?
         ''', (self.workout_id,))
         rows = cursor.fetchall()
         conn.close()
-
         for row in rows:
-            btn = Button(text=row[1], size_hint_y=None, height=50)
-            btn.bind(on_press=lambda x, eid=row[0], ename=row[1]: self.open_exercise(eid, ename))
-            ex_list.add_widget(btn)
-    
+            item = WorkoutExerciseItem(
+                exercise_id=row[0], 
+                exercise_name=row[1], 
+                workout_id=self.workout_id, 
+                screen=self
+            )
+            ex_list.add_widget(item)
+
     def open_exercise(self, exercise_id, exercise_name):
         screen = self.manager.get_screen('exercise_detail')
         screen.load_sets(self.workout_id, exercise_id, exercise_name)
         self.manager.current = 'exercise_detail'
 
-class CopyWorkoutScreen(Screen):
-    def on_enter(self):
-        self.load_workouts()
-
-    def load_workouts(self):
-        copy_list = self.ids.copy_list
-        copy_list.clear_widgets()
-
-        conn = sqlite3.connect('tracker.db')
-        cursor = conn.cursor()
-        cursor.execute('SELECT id, date, description FROM workouts ORDER BY date DESC')
-        rows = cursor.fetchall()
-        conn.close()
-
-        for row in rows:
-            btn = Button(
-                text=f"{row[2] or 'Без описания'} | {row[1]}",
-                size_hint_y=None,
-                height=50
-            )
-            btn.bind(on_press=lambda x, wid=row[0]: self.copy_workout(wid))
-            copy_list.add_widget(btn)
-
-    def copy_workout(self, workout_id):
-        conn = sqlite3.connect('tracker.db')
-        cursor = conn.cursor()
-        
-        cursor.execute('SELECT date, bodyweight, description FROM workouts WHERE id = ?', (workout_id,))
-        workout = cursor.fetchone()
-        
-        cursor.execute('''
-            SELECT e.id, e.name 
-            FROM workout_sets ws
-            JOIN exercises e ON ws.exercise_id = e.id
-            WHERE ws.workout_id = ?
-        ''', (workout_id,))
-        exercises = cursor.fetchall()
-        conn.close()
-
-        screen = self.manager.get_screen('new_workout')
-        screen.coming_from_picker = True
-        screen.ids.workout_date.text = workout[0] or ''
-        screen.ids.bodyweight.text = str(workout[1]) if workout[1] else ''
-        screen.ids.workout_desc.text = workout[2] or ''
-        
-        screen.ids.selected_exercises.clear_widgets()
-        for ex in exercises:
-            item = SelectedExerciseItem(exercise_id=ex[0], name=ex[1], screen=screen)
-            screen.ids.selected_exercises.add_widget(item)
-
-        self.manager.current = 'new_workout'
-
-
-class SelectedExerciseItem(BoxLayout):
-    def __init__(self, exercise_id, name, screen, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'horizontal'
-        self.size_hint_y = None
-        self.height = 50
-        self.exercise_id = exercise_id
-        self.screen = screen
-        self.spacing = 5 
-
-        self.add_widget(Label(text=name))
-
-        btn_del = Button(text='X', size_hint_x=0.2)
-        btn_del.bind(on_press=lambda x: self.remove_from_workout())
-        self.add_widget(btn_del)
-
-    def remove_from_workout(self):
-        self.screen.ids.selected_exercises.remove_widget(self)
+    def add_exercise_action(self):
+        picker_screen = self.manager.get_screen('exercise_picker')
+        picker_screen.return_to = 'workout_detail'
+        picker_screen.return_to_screen = 'workout_detail' 
+        picker_screen.workout_id = self.workout_id
+        self.manager.current = 'exercise_picker'
 
 class PickerItem(BoxLayout):
     def __init__(self, exercise_id, name, screen, **kwargs):
@@ -334,16 +349,28 @@ class PickerItem(BoxLayout):
     def save_name(self):
         conn = sqlite3.connect('tracker.db')
         cursor = conn.cursor()
-        cursor.execute('UPDATE exercises SET name = ? WHERE id = ?',
-                      (self.name_input.text, self.exercise_id))
+        cursor.execute('UPDATE exercises SET name = ? WHERE id = ?', (self.name_input.text, self.exercise_id))
         conn.commit()
         conn.close()
 
     def add_to_workout(self):
-        new_workout_screen = self.screen.manager.get_screen('new_workout')
-        new_workout_screen.coming_from_picker = True 
-        new_workout_screen.on_exercise_selected(self.exercise_id, self.name_input.text)
-        self.screen.manager.current = 'new_workout'
+        picker_screen = self.screen 
+        if hasattr(picker_screen, 'return_to_screen') and picker_screen.return_to_screen == 'workout_detail':
+            conn = sqlite3.connect('tracker.db')
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO workout_sets (workout_id, exercise_id, set_number, reps, weight, completed, timer_seconds)
+                VALUES (?, ?, 1, NULL, NULL, 0, 0.0)
+            ''', (picker_screen.workout_id, self.exercise_id))
+            conn.commit()
+            conn.close()
+            picker_screen.return_to_screen = None
+            self.screen.manager.current = 'workout_detail'
+        else:
+            new_workout_screen = self.screen.manager.get_screen('new_workout')
+            new_workout_screen.coming_from_picker = True 
+            new_workout_screen.on_exercise_selected(self.exercise_id, self.name_input.text)
+            self.screen.manager.current = 'new_workout'
 
     def delete_exercise(self):
         conn = sqlite3.connect('tracker.db')
@@ -353,9 +380,14 @@ class PickerItem(BoxLayout):
         conn.close()
         self.screen.load_exercises()
 
-
 class ExercisePickerScreen(Screen):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.return_to = 'new_workout'
+
     def on_enter(self):
+        if not hasattr(self, 'return_to_screen'):
+            self.return_to_screen = None
         self.load_exercises()
 
     def save_exercise(self, text):
@@ -374,168 +406,12 @@ class ExercisePickerScreen(Screen):
         picker_list.clear_widgets()
         conn = sqlite3.connect('tracker.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT id, name FROM exercises')
+        cursor.execute('SELECT id, name FROM exercises ORDER BY id DESC')
         rows = cursor.fetchall()
         conn.close()
         for row in rows:
             item = PickerItem(exercise_id=row[0], name=row[1], screen=self)
             picker_list.add_widget(item)
-
-    def select_exercise(self, exercise_id, exercise_name):
-        self.manager.current = 'new_workout'
-        new_workout_screen = self.manager.get_screen('new_workout')
-        new_workout_screen.on_exercise_selected(exercise_id, exercise_name)
-        
-
-class NewWorkoutScreen(Screen):
-    def on_enter(self):
-        if hasattr(self, 'coming_from_picker') and self.coming_from_picker:
-            self.coming_from_picker = False
-            return
-            
-        self.ids.selected_exercises.clear_widgets()
-        if not hasattr(self, 'editing_id') or self.editing_id is None:
-            self.editing_id = None
-            self.ids.submit_btn.text = 'Создать'
-            self.ids.workout_date.text = ''
-            self.ids.bodyweight.text = ''
-            self.ids.workout_desc.text = ''
-        else:
-            self.load_workout_exercises()
-    
-    def load_workout_exercises(self):
-        conn = sqlite3.connect('tracker.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT e.id, e.name 
-            FROM workout_sets ws
-            JOIN exercises e ON ws.exercise_id = e.id
-            WHERE ws.workout_id = ?
-        ''', (self.editing_id,))
-        rows = cursor.fetchall()
-        conn.close()
-
-        for row in rows:
-            item = SelectedExerciseItem(exercise_id=row[0], name=row[1], screen=self)
-            self.ids.selected_exercises.add_widget(item)
-
-    def on_exercise_selected(self, exercise_id, exercise_name):
-        item = SelectedExerciseItem(exercise_id=exercise_id, name=exercise_name, screen=self)
-        self.ids.selected_exercises.add_widget(item)
-
-    def set_today_date(self):
-        from datetime import date
-        self.ids.workout_date.text = date.today().strftime('%d.%m.%Y')
-
-    def create_workout(self, date, bodyweight, description):
-        if not date.strip():
-            return
-        conn = sqlite3.connect('tracker.db')
-        cursor = conn.cursor()
-        if self.editing_id:
-            cursor.execute(
-                'UPDATE workouts SET date=?, bodyweight=?, description=? WHERE id=?',
-                (date, float(bodyweight) if bodyweight.strip() else None, description, self.editing_id)
-            )
-            workout_id = self.editing_id
-            cursor.execute('DELETE FROM workout_sets WHERE workout_id = ?', (workout_id,))
-        else:
-            cursor.execute(
-                'INSERT INTO workouts (date, bodyweight, description) VALUES (?, ?, ?)',
-                (date, float(bodyweight) if bodyweight.strip() else None, description)
-            )
-            workout_id = cursor.lastrowid
-        for item in self.ids.selected_exercises.children:
-            cursor.execute(
-                'INSERT INTO workout_sets (workout_id, exercise_id, set_number, reps, weight, completed) VALUES (?, ?, ?, ?, ?, ?)',
-                (workout_id, item.exercise_id, 1, None, None, 0)
-            )
-
-        conn.commit()
-        conn.close()
-        self.ids.workout_date.text = ''
-        self.ids.bodyweight.text = ''
-        self.ids.workout_desc.text = ''
-        self.editing_id = None
-        self.manager.current = 'workouts'
-
-class WorkoutItem(BoxLayout):
-    def __init__(self, workout_id, date, bodyweight, description, screen, **kwargs):
-        super().__init__(**kwargs)
-        self.orientation = 'horizontal'
-        self.size_hint_y = None
-        self.height = 53
-        self.spacing = 5 
-
-        btn_main = Button(
-            text=f"{description or 'Без описания'}\n{date} | Вес: {bodyweight or '-'}",
-            halign='center',
-            valign='middle',
-            font_size= '16sp'
-        )
-        btn_main.bind(size=btn_main.setter('text_size'))
-        btn_main.bind(on_press=lambda x: screen.open_workout(workout_id))
-        self.add_widget(btn_main)
-
-        btn_edit = Button(text='Ред.', size_hint_x=0.22, font_size= '16sp')
-        btn_edit.bind(on_press=lambda x: screen.edit_workout(
-            workout_id, date, bodyweight, description
-        ))
-        self.add_widget(btn_edit)
-
-        btn_delete = Button(text='X', size_hint_x=0.22)
-        btn_delete.bind(on_press=lambda x: self.delete_workout(workout_id, screen))
-        self.add_widget(btn_delete)
-
-    def delete_workout(self, workout_id, screen):
-        conn = sqlite3.connect('tracker.db')
-        cursor = conn.cursor()
-        cursor.execute('DELETE FROM workouts WHERE id = ?', (workout_id,))
-        conn.commit()
-        conn.close()
-        screen.load_workouts()
-
-
-class WorkoutsScreen(Screen):
-    def on_enter(self):
-        self.load_workouts()
-
-    def open_workout(self, workout_id):
-        pass
-    
-    def load_workouts(self):
-        workout_list = self.ids.workout_list
-        workout_list.clear_widgets()
-    
-        conn = sqlite3.connect('tracker.db')
-        cursor = conn.cursor()
-        cursor.execute('SELECT id, date, bodyweight, description FROM workouts ORDER BY date DESC')
-        rows = cursor.fetchall()
-        conn.close()
-
-        for row in rows:
-            item = WorkoutItem(
-                workout_id=row[0], 
-                date=row[1], 
-                bodyweight=row[2], 
-                description=row[3], 
-                screen=self
-            )
-            workout_list.add_widget(item)
-    
-    def edit_workout(self, workout_id, date, bodyweight, description):
-        screen = self.manager.get_screen('new_workout')
-        screen.editing_id = workout_id
-        screen.ids.workout_date.text = date or ''
-        screen.ids.bodyweight.text = str(bodyweight) if bodyweight else ''
-        screen.ids.workout_desc.text = description or ''
-        screen.ids.submit_btn.text = 'Сохранить изменения'
-        self.manager.current = 'new_workout'
-    
-    def open_workout(self, workout_id):
-        screen = self.manager.get_screen('workout_detail')
-        screen.workout_id = workout_id
-        self.manager.current = 'workout_detail'
 
 class ExerciseItem(BoxLayout):
     def __init__(self, exercise_id, name, screen, **kwargs):
@@ -579,7 +455,7 @@ class ExercisesScreen(Screen):
         exercise_list.clear_widgets()
         conn = sqlite3.connect('tracker.db')
         cursor = conn.cursor()
-        cursor.execute('SELECT id, name FROM exercises')
+        cursor.execute('SELECT id, name FROM exercises ORDER BY id DESC')
         rows = cursor.fetchall()
         conn.close()
 
@@ -598,6 +474,185 @@ class ExercisesScreen(Screen):
         self.ids.exercise_name.text = ''
         self.load_exercises()
 
+class WorkoutItem(BoxLayout):
+    def __init__(self, workout_id, date, bodyweight, description, screen, **kwargs):
+        super().__init__(**kwargs)
+        self.orientation = 'horizontal'
+        self.size_hint_y = None
+        self.height = 75
+        self.spacing = 5 
+
+        btn_copy = Button(text='Коп.', size_hint_x=0.22, font_size='15sp')
+        btn_copy.bind(on_press=lambda x: self.duplicate_workout(workout_id, screen))
+        self.add_widget(btn_copy)
+
+        display_weight = f"Вес: {bodyweight}" if bodyweight and str(bodyweight).strip() else "Вес: -"
+        btn_main = Button(
+            text=f"{description or 'Без описания'}\n{date}\n{display_weight}",
+            halign='center',
+            valign='middle',
+            font_size='16sp',
+            line_height=1.1
+        )
+        btn_main.bind(size=btn_main.setter('text_size'))
+        btn_main.bind(on_press=lambda x: screen.open_workout(workout_id))
+        self.add_widget(btn_main)
+
+        
+
+        btn_edit = Button(text='Ред.', size_hint_x=0.22, font_size='17sp')
+        btn_edit.bind(on_press=lambda x: screen.edit_workout(workout_id, date, bodyweight, description))
+        self.add_widget(btn_edit)
+
+        btn_delete = Button(text='X', size_hint_x=0.22, font_size='20sp')
+        btn_delete.bind(on_press=lambda x: self.delete_workout(workout_id, screen))
+        self.add_widget(btn_delete)
+
+    def duplicate_workout(self, workout_id, screen):
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+
+        cursor.execute('SELECT bodyweight, description FROM workouts WHERE id = ?', (workout_id,))
+        original_workout = cursor.fetchone()
+
+        today_str = date.today().strftime('%d.%m.%Y')
+        cursor.execute(
+            'INSERT INTO workouts (date, bodyweight, description) VALUES (?, ?, ?)',
+            (today_str, original_workout[0], original_workout[1])
+        )
+        new_workout_id = cursor.lastrowid
+
+        cursor.execute('''
+            SELECT DISTINCT exercise_id 
+            FROM workout_sets 
+            WHERE workout_id = ?
+        ''', (workout_id,))
+        exercises = cursor.fetchall()
+        for ex in exercises:
+            exercise_id = ex[0]
+            cursor.execute('''
+                INSERT INTO workout_sets (workout_id, exercise_id, set_number, reps, weight, completed, timer_seconds)
+                VALUES (?, ?, 1, NULL, NULL, 0, 0.0)
+            ''', (new_workout_id, exercise_id))
+            
+        conn.commit()
+        conn.close()
+        
+        screen.load_workouts()
+
+    def delete_workout(self, workout_id, screen):
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM workouts WHERE id = ?', (workout_id,))
+        conn.commit()
+        conn.close()
+        screen.load_workouts()
+
+class WorkoutsScreen(Screen):
+    def on_enter(self):
+        self.load_workouts()
+    
+    def load_workouts(self):
+        workout_list = self.ids.workout_list
+        workout_list.clear_widgets()
+    
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, date, bodyweight, description FROM workouts ORDER BY id DESC')
+        rows = cursor.fetchall()
+        conn.close()
+
+        for row in rows:
+            item = WorkoutItem(
+                workout_id=row[0], date=row[1], bodyweight=row[2], description=row[3], screen=self
+            )
+            workout_list.add_widget(item)
+    
+    def edit_workout(self, workout_id, date, bodyweight, description):
+        screen = self.manager.get_screen('new_workout')
+        screen.editing_id = workout_id
+        screen.is_creating_new = False
+        
+        if 'screen_title' in screen.ids:
+            screen.ids.screen_title.text = 'Редактирование'
+        if 'submit_btn' in screen.ids:
+            screen.ids.submit_btn.text = 'Сохранить изменения'
+        
+        screen.ids.workout_date.text = date or ''
+        screen.ids.bodyweight.text = str(bodyweight) if bodyweight else ''
+        screen.ids.workout_desc.text = description or ''
+        self.manager.current = 'new_workout'
+
+    def new_workout_action(self):
+        screen = self.manager.get_screen('new_workout')
+        screen.editing_id = None
+        screen.is_creating_new = True
+        
+        if 'screen_title' in screen.ids:
+            screen.ids.screen_title.text = 'Новая тренировка'
+        if 'submit_btn' in screen.ids:
+            screen.ids.submit_btn.text = 'Создать'
+        
+        screen.ids.workout_date.text = ''
+        screen.ids.bodyweight.text = ''
+        screen.ids.workout_desc.text = ''
+        if 'selected_exercises' in screen.ids:
+            screen.ids.selected_exercises.clear_widgets()
+        self.manager.current = 'new_workout'
+    
+    def open_workout(self, workout_id):
+        screen = self.manager.get_screen('workout_detail')
+        screen.workout_id = workout_id
+        self.manager.current = 'workout_detail'
+
+class NewWorkoutScreen(Screen):
+    def on_enter(self):
+        if hasattr(self, 'coming_from_picker') and self.coming_from_picker:
+            self.coming_from_picker = False
+            return
+
+        if hasattr(self, 'is_creating_new') and self.is_creating_new:
+            if 'selected_exercises' in self.ids:
+                self.ids.selected_exercises.clear_widgets()
+
+    def on_pre_enter(self):
+        if not hasattr(self, 'is_creating_new'):
+            self.is_creating_new = True
+
+    def set_today_date(self):
+        self.ids.workout_date.text = date.today().strftime('%d.%m.%Y')
+
+    def create_workout(self, date, bodyweight, description):
+        if not date.strip():
+            return
+        conn = sqlite3.connect('tracker.db')
+        cursor = conn.cursor()
+        
+        if self.editing_id:
+            cursor.execute(
+                'UPDATE workouts SET date=?, bodyweight=?, description=? WHERE id=?',
+                (date, float(bodyweight) if bodyweight.strip() else None, description, self.editing_id)
+            )
+        else:
+            cursor.execute(
+                'INSERT INTO workouts (date, bodyweight, description) VALUES (?, ?, ?)',
+                (date, float(bodyweight) if bodyweight.strip() else None, description)
+            )
+            
+        conn.commit()
+        conn.close()
+        
+        self.ids.workout_date.text = ''
+        self.ids.bodyweight.text = ''
+        self.ids.workout_desc.text = ''
+        self.editing_id = None
+        self.manager.current = 'workouts'
+    def go_back_action(self):
+        self.editing_id = None
+        if 'screen_title' in self.ids:
+            self.ids.screen_title.text = 'Новая тренировка'
+        self.manager.current = 'workouts'
+
 class TrackerApp(App):
     def build(self):
         self.init_db()
@@ -612,6 +667,5 @@ class TrackerApp(App):
         cursor.execute('CREATE TABLE IF NOT EXISTS workout_sets (id INTEGER PRIMARY KEY AUTOINCREMENT, workout_id INTEGER NOT NULL, exercise_id INTEGER NOT NULL, set_number INTEGER NOT NULL, reps INTEGER, weight REAL, completed INTEGER DEFAULT 0, timer_seconds REAL DEFAULT 0.0)')
         conn.commit()
         conn.close()
-
 if __name__ == '__main__':
     TrackerApp().run()
