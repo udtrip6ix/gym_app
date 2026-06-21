@@ -13,6 +13,7 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.image import Image
 from kivy.uix.behaviors import ButtonBehavior
 from kivy.clock import Clock
+from kivy.metrics import dp
 import sqlite3
 import time
 from datetime import date
@@ -94,9 +95,9 @@ class SetItem(BoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         self.size_hint_y = None
-        self.height = 240
-        self.spacing = 8
-        self.padding = 10
+        self.height = dp(240)
+        self.spacing = dp(8)
+        self.padding = dp(10)
         self.set_id = set_id
         self.screen = screen
         self.completed = completed
@@ -107,7 +108,7 @@ class SetItem(BoxLayout):
         with self.canvas.before:
             from kivy.graphics import Color, RoundedRectangle
             Color(1, 1, 1, 0.15)
-            self.bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[15])
+            self.bg = RoundedRectangle(pos=self.pos, size=self.size, radius=[dp(15)])
         self.bind(pos=self.update_bg, size=self.update_bg)
 
         top_bar = BoxLayout(orientation='horizontal', size_hint_y=0.2)
@@ -119,15 +120,15 @@ class SetItem(BoxLayout):
             valign='middle'
         ))
         if set_number > 1:
-            del_btn = Button(text='X', size_hint_x=None, width=40, font_size='18sp')
+            del_btn = Button(text='X', size_hint_x=None, width=dp(40), font_size='18sp')
             del_btn.bind(on_press=lambda x: self.delete_set())
             top_bar.add_widget(del_btn)
         
         self.add_widget(top_bar)
 
-        row = BoxLayout(orientation='horizontal', spacing=8, size_hint_y=0.4)
+        row = BoxLayout(orientation='horizontal', spacing=dp(8), size_hint_y=0.4)
 
-        weight_box = BoxLayout(orientation='vertical', spacing=2)
+        weight_box = BoxLayout(orientation='vertical', spacing=dp(2))
         self.weight_input = SetTextInput(
             text=str(weight) if weight else '',
             hint_text='Вес кг',
@@ -147,7 +148,7 @@ class SetItem(BoxLayout):
         self.check_btn.bind(on_press=lambda x: self.toggle_completed())
         row.add_widget(self.check_btn)
 
-        reps_box = BoxLayout(orientation='vertical', spacing=2)
+        reps_box = BoxLayout(orientation='vertical', spacing=dp(2))
         self.reps_input = SetTextInput(
             text=str(reps) if reps else '',
             hint_text='Повторы',
@@ -260,11 +261,11 @@ class WorkoutExerciseItem(BoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint_y = None
-        self.height = 50
+        self.height = dp(50)
         self.exercise_id = exercise_id
         self.workout_id = workout_id
         self.screen = screen
-        self.spacing = 5
+        self.spacing = dp(5)
 
         btn_main = Button(text=exercise_name, size_hint_x=0.8)
         btn_main.bind(on_press=lambda x: self.screen.open_exercise(exercise_id, exercise_name))
@@ -329,10 +330,10 @@ class PickerItem(BoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint_y = None
-        self.height = 50
+        self.height = dp(50)
         self.exercise_id = exercise_id
         self.screen = screen
-        self.spacing = 5 
+        self.spacing = dp(5)
 
         self.name_input = TextInput(text=name, multiline=False)
         self.name_input.bind(on_text_validate=lambda x: self.save_name())
@@ -418,9 +419,9 @@ class ExerciseItem(BoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint_y = None
-        self.height = 50
+        self.height = dp(50)
         self.exercise_id = exercise_id
-        self.spacing = 5 
+        self.spacing = dp(5)
 
         self.name_input = TextInput(text=name, multiline=False)
         self.name_input.bind(on_text_validate=lambda x: self.save_name())
@@ -479,8 +480,8 @@ class WorkoutItem(BoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'horizontal'
         self.size_hint_y = None
-        self.height = 75
-        self.spacing = 5 
+        self.height = dp(75)
+        self.spacing = dp(5)
 
         btn_copy = Button(text='Коп.', size_hint_x=0.22, font_size='15sp')
         btn_copy.bind(on_press=lambda x: self.duplicate_workout(workout_id, screen))
@@ -497,8 +498,6 @@ class WorkoutItem(BoxLayout):
         btn_main.bind(size=btn_main.setter('text_size'))
         btn_main.bind(on_press=lambda x: screen.open_workout(workout_id))
         self.add_widget(btn_main)
-
-        
 
         btn_edit = Button(text='Ред.', size_hint_x=0.22, font_size='17sp')
         btn_edit.bind(on_press=lambda x: screen.edit_workout(workout_id, date, bodyweight, description))
@@ -668,4 +667,27 @@ class TrackerApp(App):
         conn.commit()
         conn.close()
 if __name__ == '__main__':
-    TrackerApp().run()
+    try:
+        TrackerApp().run()
+    except Exception as e:
+        from kivy.base import runTouchApp
+        from kivy.lang import Builder
+        import traceback
+        
+        err_text = traceback.format_exc()
+        print(err_text)
+        
+        root = Builder.load_string(f"""
+ScrollView:
+    do_scroll_x: False
+    do_scroll_y: True
+    Label:
+        text: {repr(err_text)}
+        size_hint_y: None
+        height: self.texture_size[1]
+        text_size: self.width, None
+        padding: 20, 20
+        color: 1, 0, 0, 1
+        font_size: '16sp'
+        """)
+        runTouchApp(root)
